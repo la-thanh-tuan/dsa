@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSA Mastery Roadmap — Interactive Study Dashboard (Light Theme)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .node-card { transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+    .node-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08); }
+    .node-active { box-shadow: 0 0 0 2px #0284c7, 0 12px 28px -6px rgba(2, 132, 199, 0.22); border-color: #0284c7 !important; background-color: #f0f9ff !important; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-600 selection:text-white">
+
+  <!-- ZONE 1: TOP HEADER & TELEMETRY BAR -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm px-6 py-3.5">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-600 to-indigo-600 flex items-center justify-center font-extrabold text-white shadow-md shadow-sky-600/20">
+          DSA
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            Lộ Trình Chinh Phục DSA
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">Light Edition v2.0</span>
+          </h1>
+          <p class="text-xs text-slate-500">Dependency Tree • Pattern Cheat Sheets • Spaced Repetition Tracker</p>
+        </div>
+      </div>
+
+      <!-- Overall Progress Telemetry -->
+      <div class="flex items-center gap-6 bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl">
+        <div>
+          <div class="flex items-center justify-between text-xs mb-1 gap-4">
+            <span class="text-slate-600 font-medium">Tiến độ tổng thể</span>
+            <span id="overall-count" class="mono font-bold text-sky-700">0 / 48 bài (0%)</span>
+          </div>
+          <div class="w-48 h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div id="overall-bar" class="h-full bg-gradient-to-r from-sky-600 to-emerald-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="h-7 w-px bg-slate-200 hidden sm:block"></div>
+        <div class="hidden sm:flex items-center gap-2.5 text-xs">
+          <span class="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 mono font-medium">Easy: <b id="easy-stat">0</b></span>
+          <span class="px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 mono font-medium">Med: <b id="med-stat">0</b></span>
+          <span class="px-2.5 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 mono font-medium">Hard: <b id="hard-stat">0</b></span>
+          <span class="px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200 mono font-medium">Cần ôn: <b id="review-stat">0</b></span>
+        </div>
+      </div>
+
+      <!-- View Controls & Actions -->
+      <div class="flex items-center gap-2">
+        <div class="bg-slate-100 p-1 rounded-lg border border-slate-200 flex text-xs font-semibold">
+          <button onclick="switchMainView('roadmap')" id="btn-view-roadmap" class="px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-sm transition">Sơ đồ Cây (Tree)</button>
+          <button onclick="switchMainView('table')" id="btn-view-table" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">Bảng Tất cả Bài (Table)</button>
+          <button onclick="switchMainView('review')" id="btn-view-review" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">Hộp Ôn tập</button>
+        </div>
+        <button onclick="exportProgress()" title="Xuất tiến độ ra JSON" class="text-xs font-medium px-3 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-sm transition">
+          Xuất JSON
+        </button>
+        <button onclick="resetProgress()" title="Xóa tiến độ" class="text-xs font-medium px-2.5 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+          Reset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+
+    <!-- ZONE 2: LEFT / CENTER CANVAS (TREE VIEW OR TABLE VIEW) -->
+    <section class="lg:col-span-7 xl:col-span-7 flex flex-col gap-4">
+
+      <!-- ROADMAP TREE VIEW -->
+      <div id="view-roadmap" class="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              Sơ đồ Cây Phụ Thuộc Kiến Thức (Dependency DAG)
+            </h2>
+            <p class="text-xs text-slate-500">Click vào từng Nút để xem Dấu hiệu nhận biết, Code Template và tích chọn bài tập ở bảng bên phải.</p>
+          </div>
+          <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 hidden sm:inline">Luồng học: Trên ➔ Dưới</span>
+        </div>
+
+        <!-- Tiered Tree Layout -->
+        <div class="flex flex-col items-center space-y-6 relative z-10">
+
+          <!-- TIER 1: NODE 1 -->
+          <div class="w-full max-w-md" id="node-container-1"></div>
+
+          <!-- Arrow Down Split -->
+          <div class="flex flex-col items-center -my-2">
+            <div class="w-0.5 h-5 bg-sky-400"></div>
+            <div class="w-64 sm:w-80 h-0.5 bg-sky-400"></div>
+            <div class="w-64 sm:w-80 flex justify-between">
+              <div class="w-0.5 h-5 bg-sky-400"></div>
+              <div class="w-0.5 h-5 bg-sky-400"></div>
+            </div>
+          </div>
+
+          <!-- TIER 2: NODE 2 & NODE 3 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
+            <div id="node-container-2"></div>
+            <div id="node-container-3"></div>
+          </div>
+
+          <!-- Arrow Merge to Node 4 -->
+          <div class="flex flex-col items-center -my-2">
+            <div class="w-64 sm:w-80 flex justify-between">
+              <div class="w-0.5 h-5 bg-sky-400"></div>
+              <div class="w-0.5 h-5 bg-sky-400"></div>
+            </div>
+            <div class="w-64 sm:w-80 h-0.5 bg-sky-400"></div>
+            <div class="w-0.5 h-5 bg-sky-400"></div>
+          </div>
+
+          <!-- TIER 3: NODE 4 -->
+          <div class="w-full max-w-md" id="node-container-4"></div>
+
+          <!-- Arrow Down Split to Node 5 & 6 -->
+          <div class="flex flex-col items-center -my-2">
+            <div class="w-0.5 h-6 bg-sky-400"></div>
+          </div>
+
+          <!-- TIER 4: NODE 5 -->
+          <div class="w-full max-w-md" id="node-container-5"></div>
+
+          <!-- Arrow Down to Node 6 -->
+          <div class="flex flex-col items-center -my-2">
+            <div class="w-0.5 h-6 bg-sky-400"></div>
+          </div>
+
+          <!-- TIER 5: NODE 6 -->
+          <div class="w-full max-w-md" id="node-container-6"></div>
+
+        </div>
+      </div>
+
+      <!-- FULL TABLE VIEW (HIDDEN BY DEFAULT) -->
+      <div id="view-table" class="hidden bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Danh sách Toàn bộ 48 Bài Tập Trọng Tâm</h2>
+            <p class="text-xs text-slate-500">Lọc theo độ khó, trạng thái hoặc tìm kiếm theo tên bài / kỹ thuật.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="search-input" oninput="renderAllProblemsTable()" type="text" placeholder="Tìm tên bài, pattern..." class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-sky-600" />
+            <select id="filter-diff" onchange="renderAllProblemsTable()" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium">
+              <option value="ALL">Mọi độ khó</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                <th class="py-2.5 px-2">Xong</th>
+                <th class="py-2.5 px-2">Ôn lại</th>
+                <th class="py-2.5 px-2">Bài tập</th>
+                <th class="py-2.5 px-2">Giai đoạn</th>
+                <th class="py-2.5 px-2">Độ khó</th>
+                <th class="py-2.5 px-2">Pattern</th>
+              </tr>
+            </thead>
+            <tbody id="all-problems-tbody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SPACED REPETITION REVIEW VIEW (HIDDEN BY DEFAULT) -->
+      <div id="view-review" class="hidden bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+        <div class="mb-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            Hộp Ôn Tập Ngắt Quãng (Spaced Repetition Queue)
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Các bài tập được gắn cờ <span class="text-purple-700 font-semibold">★ Cần ôn lại</span> sẽ xuất hiện tại đây. Hãy tự code lại không nhìn lời giải sau 3 ngày, 7 ngày và 21 ngày.
+          </p>
+        </div>
+        <div id="review-list-container" class="space-y-2.5"></div>
+      </div>
+
+      <!-- N CONSTRAINT CHEAT SHEET CARD -->
+      <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-sky-700 mb-3">
+          Bảng Phản Xạ Chọn Thuật Toán Theo Kích Thước Đầu Vào (N Constraints)
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div class="bg-rose-50/60 border border-rose-200 p-3 rounded-xl">
+            <div class="mono font-bold text-rose-700">N ≤ 20</div>
+            <div class="text-slate-800 font-semibold mt-0.5">O(2ⁿ) / O(N!)</div>
+            <div class="text-[11px] text-slate-600 mt-1">Backtracking, Bitmask DP</div>
+          </div>
+          <div class="bg-amber-50/60 border border-amber-200 p-3 rounded-xl">
+            <div class="mono font-bold text-amber-700">N ≤ 5,000</div>
+            <div class="text-slate-800 font-semibold mt-0.5">O(N²)</div>
+            <div class="text-[11px] text-slate-600 mt-1">2D DP, Nested Loops, 3Sum</div>
+          </div>
+          <div class="bg-emerald-50/60 border border-emerald-200 p-3 rounded-xl">
+            <div class="mono font-bold text-emerald-700">N ≤ 2·10⁵</div>
+            <div class="text-slate-800 font-semibold mt-0.5">O(N log N) / O(N)</div>
+            <div class="text-[11px] text-slate-600 mt-1">Sort + Two Pointers, Heap, Dijkstra</div>
+          </div>
+          <div class="bg-sky-50/60 border border-sky-200 p-3 rounded-xl">
+            <div class="mono font-bold text-sky-700">N ≥ 10⁹</div>
+            <div class="text-slate-800 font-semibold mt-0.5">O(log N) / O(1)</div>
+            <div class="text-[11px] text-slate-600 mt-1">Binary Search, Math, Bitwise</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ZONE 3: RIGHT INSPECTOR & PRACTICE DRAWER -->
+    <aside class="lg:col-span-5 xl:col-span-5">
+      <div class="sticky top-20 bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col max-h-[calc(100vh-6.5rem)]">
+
+        <!-- Inspector Header -->
+        <div class="p-5 bg-slate-50/80 border-b border-slate-200">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span id="insp-badge" class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+              Nút 1 • Tuần 1-2
+            </span>
+            <span id="insp-complexity" class="mono text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+              Time: O(n) | Space: O(n)
+            </span>
+          </div>
+          <h2 id="insp-title" class="text-lg font-bold text-slate-900 leading-snug">
+            1. Nền tảng: Mảng, Chuỗi & Bảng băm
+          </h2>
+          <p id="insp-desc" class="text-xs text-slate-600 mt-1"></p>
+
+          <!-- Inspector Sub-Tabs -->
+          <div class="grid grid-cols-3 gap-1.5 bg-slate-200/70 p-1 rounded-xl border border-slate-200 mt-4 text-xs font-semibold">
+            <button onclick="switchInspectorTab('problems')" id="tab-btn-problems" class="py-1.5 rounded-lg bg-white text-sky-700 shadow-sm transition">
+              Bài tập (<span id="tab-prob-count">8</span>)
+            </button>
+            <button onclick="switchInspectorTab('signals')" id="tab-btn-signals" class="py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+              Dấu hiệu & Lý thuyết
+            </button>
+            <button onclick="switchInspectorTab('template')" id="tab-btn-template" class="py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+              Code Template
+            </button>
+          </div>
+        </div>
+
+        <!-- Inspector Body (Scrollable) -->
+        <div class="p-5 overflow-y-auto flex-1 space-y-4">
+
+          <!-- SUB-TAB 1: CURATED PROBLEMS -->
+          <div id="insp-tab-problems" class="space-y-2.5"></div>
+
+          <!-- SUB-TAB 2: TRIGGER SIGNALS & PITFALLS -->
+          <div id="insp-tab-signals" class="hidden space-y-4 text-xs">
+            <div class="bg-sky-50/80 border border-sky-200 rounded-xl p-4">
+              <h4 class="font-bold text-sky-800 uppercase tracking-wider mb-2">🎯 Dấu hiệu nhận diện (Khi nào dùng?)</h4>
+              <ul id="insp-signals-list" class="space-y-2 text-slate-700 list-disc pl-4 leading-relaxed"></ul>
+            </div>
+            <div class="bg-rose-50/80 border border-rose-200 rounded-xl p-4">
+              <h4 class="font-bold text-rose-800 uppercase tracking-wider mb-2">⚠️ Bẫy thường gặp (Common Pitfalls)</h4>
+              <ul id="insp-pitfalls-list" class="space-y-2 text-slate-700 list-disc pl-4 leading-relaxed"></ul>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <h4 class="font-bold text-emerald-700 uppercase tracking-wider mb-2">📝 Ghi chú cá nhân cho Giai đoạn này</h4>
+              <textarea id="stage-note-input" oninput="saveStageNote()" rows="4" placeholder="Ghi lại kinh nghiệm, công thức hoặc lỗi bạn hay mắc ở chủ đề này..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:border-sky-600"></textarea>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 3: CODE TEMPLATE -->
+          <div id="insp-tab-template" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700" id="template-title">Python Standard Pattern</span>
+              <button onclick="copyCodeTemplate()" id="copy-btn" class="text-xs font-semibold px-2.5 py-1 rounded-md bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition">
+                Copy Code
+              </button>
+            </div>
+            <pre class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-sky-200 overflow-x-auto leading-relaxed shadow-inner"><code id="insp-code-block"></code></pre>
+          </div>
+
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <script>
+    // DATASET: 6 STAGES OF DSA ROADMAP
+    const ROADMAP_DATA = [
+      {
+        id: 1,
+        code: "Nút 1 • Tuần 1-2",
+        title: "1. Nền tảng: Mảng, Chuỗi & Bảng băm",
+        shortDesc: "Big-O, Prefix Sum, Hash Map/Set & Đếm tần suất",
+        complexity: "Time: O(n) | Space: O(n)",
+        desc: "Xây dựng phản xạ đánh đổi không gian bộ nhớ lấy thời gian truy xuất O(1) với Hash Table và kỹ thuật mảng cộng dồn.",
+        signals: [
+          "Đề bài hỏi tìm cặp phần tử có tổng/hiệu bằng K trong mảng chưa sắp xếp ➔ Dùng Hash Map lưu {giá_trị: chỉ_số}.",
+          "Kiểm tra hai chuỗi có phải đảo chữ (Anagram) hoặc đếm tần suất xuất hiện ➔ Dùng mảng đếm 26 chữ cái hoặc Hash Counter.",
+          "Tính tổng đoạn con từ chỉ số L đến R lặp đi lặp lại hoặc đếm số mảng con có tổng bằng K ➔ Dùng Prefix Sum kết hợp Hash Map."
+        ],
+        pitfalls: [
+          "Dùng hàm tìm kiếm `in list` (O(n)) bên trong vòng lặp `for` làm tổng độ phức tạp tăng vọt lên O(n²).",
+          "Quên khởi tạo `{0: 1}` trong bài toán Prefix Sum + Hash Map dẫn đến bỏ sót các mảng con bắt đầu từ chỉ số 0."
+        ],
+        templateTitle: "Mẫu Prefix Sum + Hash Map đếm mảng con tổng bằng K",
+        templateCode: `def subarray_sum_equals_k(nums: list[int], k: int) -> int:
+    # Lưu tần suất xuất hiện của các prefix_sum trước đó
+    prefix_counts = {0: 1}
+    current_sum = 0
+    ans = 0
+    
+    for x in nums:
+        current_sum += x
+        # Nếu (current_sum - k) đã xuất hiện, tồn tại đoạn con có tổng = k
+        if (current_sum - k) in prefix_counts:
+            ans += prefix_counts[current_sum - k]
+        prefix_counts[current_sum] = prefix_counts.get(current_sum, 0) + 1
+        
+    return ans`,
+        problems: [
+          { id: "p1_1", name: "Contains Duplicate", diff: "Easy", pattern: "Hash Set", url: "https://leetcode.com/problems/contains-duplicate/", hint: "Đưa vào Set để kiểm tra trùng trong O(1)." },
+          { id: "p1_2", name: "Valid Anagram", diff: "Easy", pattern: "Frequency Array", url: "https://leetcode.com/problems/valid-anagram/", hint: "Đếm tần suất 26 ký tự của 2 chuỗi." },
+          { id: "p1_3", name: "Two Sum", diff: "Easy", pattern: "Hash Map Lookup", url: "https://leetcode.com/problems/two-sum/", hint: "Kiểm tra (target - x) trong Map khi đang duyệt." },
+          { id: "p1_4", name: "Group Anagrams", diff: "Medium", pattern: "Hash Tuple Key", url: "https://leetcode.com/problems/group-anagrams/", hint: "Dùng tuple 26 số đếm ký tự làm key của Dict." },
+          { id: "p1_5", name: "Top K Frequent Elements", diff: "Medium", pattern: "Bucket Sort", url: "https://leetcode.com/problems/top-k-frequent-elements/", hint: "Mảng các bucket có chỉ số là tần suất xuất hiện." },
+          { id: "p1_6", name: "Product of Array Except Self", diff: "Medium", pattern: "Prefix & Suffix", url: "https://leetcode.com/problems/product-of-array-except-self/", hint: "Nhân tích lũy từ trái qua rồi nhân dồn từ phải lại." },
+          { id: "p1_7", name: "Subarray Sum Equals K", diff: "Medium", pattern: "Prefix Sum + Map", url: "https://leetcode.com/problems/subarray-sum-equals-k/", hint: "Tìm số lần (cur_sum - k) đã xuất hiện." },
+          { id: "p1_8", name: "Longest Consecutive Sequence", diff: "Medium", pattern: "Hash Set", url: "https://leetcode.com/problems/longest-consecutive-sequence/", hint: "Chỉ bắt đầu đếm chuỗi từ x nếu (x - 1) không có trong Set." }
+        ]
+      },
+      {
+        id: 2,
+        code: "Nút 2 • Tuần 3-4",
+        title: "2. Kỹ thuật Con trỏ & Tìm kiếm nhị phân",
+        shortDesc: "Two Pointers, Sliding Window & Binary Search",
+        complexity: "Time: O(n) / O(log n) | Space: O(1)",
+        desc: "Tối ưu các bài toán duyệt mảng con liên tiếp và tìm kiếm trên tập dữ liệu có tính đơn điệu mà không cần vòng lặp lồng nhau.",
+        signals: [
+          "Mảng đã sắp xếp (hoặc có thể sắp xếp) và cần tìm bộ đôi/bộ ba thỏa tổng ➔ Hai con trỏ ngược chiều (Left & Right).",
+          "Tìm chuỗi con / mảng con liên tiếp dài nhất hoặc ngắn nhất thỏa điều kiện ➔ Cửa sổ trượt động (Dynamic Sliding Window).",
+          "Đề bài có cụm 'Tìm giá trị nhỏ nhất của giá trị lớn nhất' hoặc kiểm tra điều kiện có tính đơn điệu (True/False) ➔ Binary Search on Answer."
+        ],
+        pitfalls: [
+          "Quên cập nhật biến kết quả ở đúng thời điểm (khi cửa sổ hợp lệ vs khi cửa sổ vi phạm điều kiện).",
+          "Vòng lặp vô tận trong Binary Search khi chọn `mid` và cập nhật `left = mid` mà không cộng 1."
+        ],
+        templateTitle: "Mẫu Sliding Window & Chặt nhị phân trên tập kết quả",
+        templateCode: `# 1. Khung Cửa Sổ Trượt Động (Dynamic Sliding Window)
+def sliding_window_template(s: str) -> int:
+    left = 0
+    best = 0
+    window_counts = {}
+    for right, ch in enumerate(s):
+        window_counts[ch] = window_counts.get(ch, 0) + 1
+        while not is_valid(window_counts):  # Thu hẹp khi vi phạm điều kiện
+            window_counts[s[left]] -= 1
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+
+# 2. Khung Binary Search tìm giá trị nhỏ nhất thỏa điều kiện
+def binary_search_on_answer(low: int, high: int) -> int:
+    while low < high:
+        mid = low + (high - low) // 2
+        if can_achieve(mid):
+            high = mid      # Thử tìm giá trị nhỏ hơn nữa
+        else:
+            low = mid + 1   # Bắt buộc phải tăng lên
+    return low`,
+        problems: [
+          { id: "p2_1", name: "Valid Palindrome", diff: "Easy", pattern: "Two Pointers", url: "https://leetcode.com/problems/valid-palindrome/", hint: "Hai con trỏ đầu-cuối bỏ qua ký tự đặc biệt." },
+          { id: "p2_2", name: "3Sum", diff: "Medium", pattern: "Sort + Two Pointers", url: "https://leetcode.com/problems/3sum/", hint: "Sắp xếp mảng, cố định nums[i] và dùng 2 con trỏ." },
+          { id: "p2_3", name: "Container With Most Water", diff: "Medium", pattern: "Greedy Two Pointers", url: "https://leetcode.com/problems/container-with-most-water/", hint: "Luôn dịch con trỏ ở cột thấp hơn vào trong." },
+          { id: "p2_4", name: "Best Time to Buy and Sell Stock", diff: "Easy", pattern: "Sliding Window", url: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/", hint: "Cập nhật đáy thấp nhất và lợi nhuận cao nhất." },
+          { id: "p2_5", name: "Longest Substring Without Repeating Characters", diff: "Medium", pattern: "Sliding Window", url: "https://leetcode.com/problems/longest-substring-without-repeating-characters/", hint: "Thu hẹp con trỏ trái khi gặp ký tự lặp." },
+          { id: "p2_6", name: "Minimum Window Substring", diff: "Hard", pattern: "Sliding Window", url: "https://leetcode.com/problems/minimum-window-substring/", hint: "Đếm số ký tự đã thỏa mãn, co left tối đa." },
+          { id: "p2_7", name: "Search in Rotated Sorted Array", diff: "Medium", pattern: "Binary Search", url: "https://leetcode.com/problems/search-in-rotated-sorted-array/", hint: "Kiểm tra nửa nào đang được sắp xếp chuẩn." },
+          { id: "p2_8", name: "Koko Eating Bananas", diff: "Medium", pattern: "BS on Answer", url: "https://leetcode.com/problems/koko-eating-bananas/", hint: "Chặt nhị phân tốc độ ăn từ 1 đến max(piles)." }
+        ]
+      },
+      {
+        id: 3,
+        code: "Nút 3 • Tuần 5-6",
+        title: "3. Cấu trúc Tuyến tính: Stack, Queue & Linked List",
+        shortDesc: "Monotonic Stack, Fast & Slow Pointers, In-place Reversal",
+        complexity: "Time: O(n) | Space: O(1) - O(n)",
+        desc: "Làm chủ kỹ thuật điều khiển con trỏ danh sách liên kết và sử dụng Ngăn xếp đơn điệu để tìm biên lớn hơn/nhỏ hơn gần nhất trong O(n).",
+        signals: [
+          "Tìm phần tử lớn hơn hoặc nhỏ hơn gần nhất ở bên phải/trái của mỗi phần tử ➔ Monotonic Stack (Ngăn xếp đơn điệu).",
+          "Bài toán có cấu trúc đóng mở đối xứng, lồng nhau (dấu ngoặc, đường dẫn file, giải mã chuỗi) ➔ Stack chuẩn.",
+          "Tìm phần tử chính giữa danh sách liên kết hoặc kiểm tra chu trình trong O(1) bộ nhớ ➔ Fast & Slow Pointers (Floyd's Cycle)."
+        ],
+        pitfalls: [
+          "Đứt liên kết khi đảo ngược Linked List do không lưu biến tạm `nxt = curr.next` trước khi gán `curr.next = prev`.",
+          "Quên khởi tạo nút giả `dummy = ListNode(0)` làm code phải xử lý quá nhiều trường hợp biên ở đầu danh sách."
+        ],
+        templateTitle: "Mẫu Monotonic Stack & Đảo ngược Linked List",
+        templateCode: `# 1. Tìm phần tử lớn hơn tiếp theo (Next Greater Element) bằng Monotonic Stack
+def next_greater_elements(nums: list[int]) -> list[int]:
+    res = [-1] * len(nums)
+    stack = []  # Lưu chỉ số (indices) theo thứ tự giá trị giảm dần
+    for i, val in enumerate(nums):
+        while stack and nums[stack[-1]] < val:
+            prev_idx = stack.pop()
+            res[prev_idx] = val
+        stack.append(i)
+    return res
+
+# 2. Đảo ngược Danh sách liên kết tại chỗ (O(1) Space)
+def reverse_list(head):
+    prev, curr = None, head
+    while curr:
+        nxt = curr.next
+        curr.next = prev
+        prev = curr
+        curr = nxt
+    return prev`,
+        problems: [
+          { id: "p3_1", name: "Valid Parentheses", diff: "Easy", pattern: "Stack", url: "https://leetcode.com/problems/valid-parentheses/", hint: "Đẩy ngoặc mở vào Stack, khớp khi gặp ngoặc đóng." },
+          { id: "p3_2", name: "Min Stack", diff: "Medium", pattern: "Auxiliary Stack", url: "https://leetcode.com/problems/min-stack/", hint: "Lưu cặp (val, current_min) tại mỗi nút của Stack." },
+          { id: "p3_3", name: "Daily Temperatures", diff: "Medium", pattern: "Monotonic Stack", url: "https://leetcode.com/problems/daily-temperatures/", hint: "Ngăn xếp đơn điệu giảm lưu index các ngày chờ ấm hơn." },
+          { id: "p3_4", name: "Largest Rectangle in Histogram", diff: "Hard", pattern: "Monotonic Stack", url: "https://leetcode.com/problems/largest-rectangle-in-histogram/", hint: "Tìm cột thấp hơn đầu tiên bên trái và bên phải." },
+          { id: "p3_5", name: "Reverse Linked List", diff: "Easy", pattern: "Pointer Reversal", url: "https://leetcode.com/problems/reverse-linked-list/", hint: "Dùng 3 con trỏ prev, curr, nxt." },
+          { id: "p3_6", name: "Linked List Cycle", diff: "Easy", pattern: "Fast & Slow Pointers", url: "https://leetcode.com/problems/linked-list-cycle/", hint: "Slow đi 1 bước, Fast đi 2 bước." },
+          { id: "p3_7", name: "Remove Nth Node From End of List", diff: "Medium", pattern: "Two Pointers + Dummy", url: "https://leetcode.com/problems/remove-nth-node-from-end-of-list/", hint: "Cho con trỏ Fast chạy trước N bước." },
+          { id: "p3_8", name: "LRU Cache", diff: "Medium", pattern: "Hash Map + Doubly LL", url: "https://leetcode.com/problems/lru-cache/", hint: "Map trỏ trực tiếp tới Node của Doubly Linked List." }
+        ]
+      },
+      {
+        id: 4,
+        code: "Nút 4 • Tuần 7-9",
+        title: "4. Cấu trúc Cây, Trie & Hàng đợi ưu tiên",
+        shortDesc: "Binary Tree, BST, DFS/BFS, Heap (Priority Queue) & Trie",
+        complexity: "Time: O(n) / O(n log k) | Space: O(h)",
+        desc: "Chinh phục tư duy đệ quy trên cấu trúc phân cấp (Trees), tìm kiếm tiền tố chuỗi (Trie) và quản lý Top-K phần tử bằng Heap.",
+        signals: [
+          "Tính chiều cao, kiểm tra cây cân bằng, đường kính hoặc đường đi lớn nhất ➔ Đệ quy DFS hậu thứ tự (Post-order).",
+          "Duyệt theo từng tầng (Level-order), nhìn từ bên phải cây, hoặc tìm độ sâu nhỏ nhất ➔ BFS dùng `collections.deque`.",
+          "Tìm K phần tử lớn nhất/nhỏ nhất, trộn K danh sách đã sắp xếp, hoặc tìm trung vị luồng dữ liệu ➔ Min-Heap / Max-Heap."
+        ],
+        pitfalls: [
+          "Kiểm tra BST chỉ so sánh nút cha với con trực tiếp mà quên truyền khoảng ràng buộc `(min_val, max_val)` xuống toàn nhánh.",
+          "Dùng Heap kích thước N thay vì duy trì Heap kích thước K (làm tốn O(N log N) thay vì O(N log K))."
+        ],
+        templateTitle: "Mẫu Duyệt Cây theo tầng (BFS) & Top-K Min-Heap",
+        templateCode: `from collections import deque
+import heapq
+
+# 1. Duyệt cây theo từng tầng (Level-Order BFS)
+def level_order(root) -> list[list[int]]:
+    if not root:
+        return []
+    res, q = [], deque([root])
+    while q:
+        level_size = len(q)
+        current_level = []
+        for _ in range(level_size):
+            node = q.popleft()
+            current_level.append(node.val)
+            if node.left: q.append(node.left)
+            if node.right: q.append(node.right)
+        res.append(current_level)
+    return res
+
+# 2. Tìm phần tử lớn thứ K bằng Min-Heap kích thước K
+def find_kth_largest(nums: list[int], k: int) -> int:
+    min_heap = []
+    for x in nums:
+        heapq.heappush(min_heap, x)
+        if len(min_heap) > k:
+            heapq.heappop(min_heap)
+    return min_heap[0]`,
+        problems: [
+          { id: "p4_1", name: "Invert Binary Tree", diff: "Easy", pattern: "Tree DFS", url: "https://leetcode.com/problems/invert-binary-tree/", hint: "Hoán đổi đệ quy nhánh trái và phải." },
+          { id: "p4_2", name: "Binary Tree Level Order Traversal", diff: "Medium", pattern: "Tree BFS", url: "https://leetcode.com/problems/binary-tree-level-order-traversal/", hint: "Dùng Queue và đo len(queue) mỗi tầng." },
+          { id: "p4_3", name: "Validate Binary Search Tree", diff: "Medium", pattern: "DFS Range Check", url: "https://leetcode.com/problems/validate-binary-search-tree/", hint: "Truyền khoảng (low, high) cho từng nút." },
+          { id: "p4_4", name: "Lowest Common Ancestor of a Binary Tree", diff: "Medium", pattern: "Bottom-up DFS", url: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/", hint: "Nếu cả trái và phải đều trả về khác None thì gốc là LCA." },
+          { id: "p4_5", name: "Kth Largest Element in an Array", diff: "Medium", pattern: "Min-Heap Size K", url: "https://leetcode.com/problems/kth-largest-element-in-an-array/", hint: "Giữ K phần tử lớn nhất trong Min-Heap." },
+          { id: "p4_6", name: "Merge K Sorted Lists", diff: "Hard", pattern: "Min-Heap", url: "https://leetcode.com/problems/merge-k-sorted-lists/", hint: "Đưa đầu của K danh sách vào Heap." },
+          { id: "p4_7", name: "Find Median from Data Stream", diff: "Hard", pattern: "Two Heaps", url: "https://leetcode.com/problems/find-median-from-data-stream/", hint: "Max-Heap giữ nửa nhỏ, Min-Heap giữ nửa lớn." },
+          { id: "p4_8", name: "Implement Trie (Prefix Tree)", diff: "Medium", pattern: "Trie Tree", url: "https://leetcode.com/problems/implement-trie-prefix-tree/", hint: "Mỗi nút là Dict children + cờ is_end." }
+        ]
+      },
+      {
+        id: 5,
+        code: "Nút 5 • Tuần 10-12",
+        title: "5. Đồ thị, Quay lui & Chiến lược Tham lam",
+        shortDesc: "Grid BFS/DFS, Topo Sort, Union-Find, Dijkstra & Backtracking",
+        complexity: "Time: O(V+E) / O(E log V) | Space: O(V)",
+        desc: "Mô hình hóa các bài toán mạng lưới, mê cung, thứ tự phụ thuộc công việc thành Đồ thị và vét cạn thông minh có cắt tỉa nhánh.",
+        signals: [
+          "Đếm số vùng đảo, tìm đường ngắn nhất trên lưới ô vuông không trọng số ➔ Grid DFS / Multi-source BFS.",
+          "Xếp lịch môn học có điều kiện tiên quyết, phát hiện chu trình đồ thị có hướng ➔ Topological Sort (Kahn's Algorithm).",
+          "Đường đi ngắn nhất có trọng số dương ➔ Dijkstra với Priority Queue. Gộp nhóm động ➔ Union-Find (DSU).",
+          "Liệt kê mọi tập con, hoán vị, tổ hợp hoặc giải Sudoku/N-Queens ➔ Backtracking (Chọn - Đệ quy - Bỏ chọn)."
+        ],
+        pitfalls: [
+          "Trong BFS, đánh dấu `visited` khi lấy ra khỏi Queue thay vì ngay lúc đẩy vào Queue ➔ Bị đẩy trùng đỉnh gây tràn bộ nhớ (MLE).",
+          "Quên `path.pop()` để khôi phục trạng thái sau khi gọi đệ quy trong Backtracking."
+        ],
+        templateTitle: "Mẫu Topological Sort (Kahn's BFS) & Union-Find (DSU)",
+        templateCode: `from collections import deque
+
+# 1. Sắp xếp Tô-pô (Kahn's Algorithm) kiểm tra thứ tự phụ thuộc
+def topo_sort(num_nodes: int, edges: list[list[int]]) -> list[int]:
+    adj = [[] for _ in range(num_nodes)]
+    in_degree = [0] * num_nodes
+    for u, v in edges:
+        adj[u].append(v)
+        in_degree[v] += 1
+    q = deque([i for i in range(num_nodes) if in_degree[i] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in adj[u]:
+            in_degree[v] -= 1
+            if in_degree[v] == 0:
+                q.append(v)
+    return order if len(order) == num_nodes else []
+
+# 2. Cấu trúc Disjoint Set Union (Union-Find)
+class UnionFind:
+    def __init__(self, n: int):
+        self.parent = list(range(n))
+    def find(self, x: int) -> int:
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])  # Path compression
+        return self.parent[x]
+    def union(self, a: int, b: int) -> bool:
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb: return False
+        self.parent[rb] = ra
+        return True`,
+        problems: [
+          { id: "p5_1", name: "Number of Islands", diff: "Medium", pattern: "Grid DFS/BFS", url: "https://leetcode.com/problems/number-of-islands/", hint: "Loang từ mỗi ô '1' để đánh dấu toàn bộ đảo." },
+          { id: "p5_2", name: "Rotting Oranges", diff: "Medium", pattern: "Multi-source BFS", url: "https://leetcode.com/problems/rotting-oranges/", hint: "Đẩy tất cả cam hỏng ban đầu vào Queue cùng lúc." },
+          { id: "p5_3", name: "Course Schedule", diff: "Medium", pattern: "Topological Sort", url: "https://leetcode.com/problems/course-schedule/", hint: "Kiểm tra đồ thị có hướng có chu trình không bằng Kahn BFS." },
+          { id: "p5_4", name: "Redundant Connection", diff: "Medium", pattern: "Union-Find (DSU)", url: "https://leetcode.com/problems/redundant-connection/", hint: "Cạnh đầu tiên nối 2 đỉnh đã cùng gốc là cạnh dư." },
+          { id: "p5_5", name: "Network Delay Time", diff: "Medium", pattern: "Dijkstra Shortest Path", url: "https://leetcode.com/problems/network-delay-time/", hint: "Min-Heap lưu (khoảng_cách, đỉnh)." },
+          { id: "p5_6", name: "Subsets", diff: "Medium", pattern: "Backtracking", url: "https://leetcode.com/problems/subsets/", hint: "Mỗi bước quyết định chọn hoặc không chọn phần tử." },
+          { id: "p5_7", name: "Combination Sum", diff: "Medium", pattern: "Backtracking", url: "https://leetcode.com/problems/combination-sum/", hint: "Truyền chỉ số bắt đầu i để cho phép chọn lặp lại." },
+          { id: "p5_8", name: "Merge Intervals", diff: "Medium", pattern: "Sorting + Greedy", url: "https://leetcode.com/problems/merge-intervals/", hint: "Sắp xếp theo start_time rồi gộp các đoạn chồng lấp." }
+        ]
+      },
+      {
+        id: 6,
+        code: "Nút 6 • Tuần 13-16",
+        title: "6. Quy hoạch động & Cấu trúc Nâng cao",
+        shortDesc: "1D/2D DP, Knapsack, LCS/LIS, Bitmask & Segment Tree",
+        complexity: "Time: O(n·m) | Space: O(n)",
+        desc: "Chuyển hóa bài toán đệ quy có bài toán con gối nhau từ O(2ⁿ) xuống thời gian đa thức bằng Memoization và Tabulation.",
+        signals: [
+          "Đề bài yêu cầu 'Đếm số cách', 'Chi phí nhỏ nhất/lớn nhất', 'Chuỗi con dài nhất' mà Tham lam bị sai.",
+          "Bài toán chọn đồ vật có giới hạn trọng lượng/tổng bằng S ➔ 0/1 Knapsack (mỗi vật 1 lần) hoặc Unbounded Knapsack (vô hạn lần).",
+          "Bài toán trên 2 chuỗi (so khớp, biến đổi, chuỗi con chung) ➔ Quy hoạch động 2 chiều `dp[i][j]` trên tiền tố `s1[:i]` và `s2[:j]`."
+        ],
+        pitfalls: [
+          "Nhảy thẳng vào viết mảng 2D Bottom-up khi chưa rõ công thức truy hồi. Hãy viết hàm `dfs(i, ...)` + `@cache` (Top-down) trước!",
+          "Duyệt xuôi mảng 1D trong bài toán 0/1 Knapsack làm một phần tử bị lấy lặp lại nhiều lần (phải duyệt ngược từ `target` về `weight`)."
+        ],
+        templateTitle: "Mẫu Quy hoạch động 0/1 Knapsack & LCS 2 chuỗi",
+        templateCode: `# 1. Mẫu 0/1 Knapsack tối ưu không gian O(W) (mỗi phần tử dùng tối đa 1 lần)
+def can_partition_subset_sum(nums: list[int]) -> bool:
+    total = sum(nums)
+    if total % 2 != 0: return False
+    target = total // 2
+    dp = [False] * (target + 1)
+    dp[0] = True
+    for num in nums:
+        # Duyệt NGƯỢC để không dùng lại cùng 1 phần tử nhiều lần
+        for s in range(target, num - 1, -1):
+            dp[s] = dp[s] or dp[s - num]
+    return dp[target]
+
+# 2. Mẫu Quy hoạch động 2 chuỗi: Longest Common Subsequence (LCS)
+def longest_common_subsequence(text1: str, text2: str) -> int:
+    m, n = len(text1), len(text2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i - 1] == text2[j - 1]:
+                dp[i][j] = 1 + dp[i - 1][j - 1]
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]`,
+        problems: [
+          { id: "p6_1", name: "House Robber", diff: "Medium", pattern: "1D Linear DP", url: "https://leetcode.com/problems/house-robber/", hint: "dp[i] = max(dp[i-1], dp[i-2] + nums[i])." },
+          { id: "p6_2", name: "Coin Change", diff: "Medium", pattern: "Unbounded Knapsack", url: "https://leetcode.com/problems/coin-change/", hint: "dp[a] = min(dp[a], dp[a - coin] + 1)." },
+          { id: "p6_3", name: "Longest Increasing Subsequence", diff: "Medium", pattern: "1D DP / Binary Search", url: "https://leetcode.com/problems/longest-increasing-subsequence/", hint: "Dùng chặt nhị phân thay thế phần tử để đạt O(n log n)." },
+          { id: "p6_4", name: "Longest Common Subsequence", diff: "Medium", pattern: "2D String DP", url: "https://leetcode.com/problems/longest-common-subsequence/", hint: "Khớp ký tự cuối của 2 tiền tố chuỗi." },
+          { id: "p6_5", name: "Partition Equal Subset Sum", diff: "Medium", pattern: "0/1 Knapsack DP", url: "https://leetcode.com/problems/partition-equal-subset-sum/", hint: "Tìm tập con có tổng bằng sum(nums) // 2." },
+          { id: "p6_6", name: "Unique Paths", diff: "Medium", pattern: "2D Grid DP", url: "https://leetcode.com/problems/unique-paths/", hint: "dp[r][c] = dp[r-1][c] + dp[r][c-1]." },
+          { id: "p6_7", name: "Word Break", diff: "Medium", pattern: "1D DP + Hash Set", url: "https://leetcode.com/problems/word-break/", hint: "dp[i] = True nếu tồn tại j < i mà dp[j] True và s[j:i] thuộc từ điển." },
+          { id: "p6_8", name: "Edit Distance", diff: "Hard", pattern: "2D String DP", url: "https://leetcode.com/problems/edit-distance/", hint: "1 + min(insert, delete, replace) khi 2 ký tự khác nhau." }
+        ]
+      }
+    ];
+
+    // STATE MANAGEMENT (LOCALSTORAGE)
+    const STORAGE_KEY = "dsa_mastery_roadmap_state_v2";
+    let appState = {
+      selectedStageId: 1,
+      activeSubTab: "problems",
+      solved: {},      // { problemId: true }
+      review: {},      // { problemId: true }
+      stageNotes: {}   // { stageId: "text" }
+    };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          appState = { ...appState, ...parsed };
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) { console.error(e); }
+    }
+
+    function diffBadgeClass(diff) {
+      if (diff === "Easy") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      if (diff === "Hard") return "bg-rose-50 text-rose-700 border-rose-200";
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    }
+
+    // RENDER TREE NODES
+    function renderTreeNodes() {
+      ROADMAP_DATA.forEach(stage => {
+        const container = document.getElementById(`node-container-${stage.id}`);
+        if (!container) return;
+
+        const total = stage.problems.length;
+        const done = stage.problems.filter(p => appState.solved[p.id]).length;
+        const pct = Math.round((done / total) * 100);
+        const isSelected = appState.selectedStageId === stage.id;
+        const isCompleted = done === total;
+
+        let statusBadge = `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">Chưa học</span>`;
+        if (isCompleted) {
+          statusBadge = `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">✓ Hoàn tất</span>`;
+        } else if (done > 0) {
+          statusBadge = `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">Đang học</span>`;
+        }
+
+        container.innerHTML = `
+          <div onclick="selectStage(${stage.id})"
+               class="node-card cursor-pointer rounded-xl p-4 bg-white border ${isSelected ? 'node-active' : 'border-slate-200 hover:border-slate-300'}">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <span class="text-[11px] font-bold text-sky-700 mono">${stage.code}</span>
+              ${statusBadge}
+            </div>
+            <h3 class="text-sm font-bold text-slate-900 leading-snug">${stage.title}</h3>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-1">${stage.shortDesc}</p>
+            <div class="mt-3">
+              <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                <span>Tiến độ bài tập</span>
+                <span class="mono font-bold text-slate-800">${done}/${total} (${pct}%)</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                <div class="h-full ${isCompleted ? 'bg-emerald-500' : 'bg-sky-600'} transition-all duration-300" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // RENDER RIGHT INSPECTOR PANEL
+    function renderInspector() {
+      const stage = ROADMAP_DATA.find(s => s.id === appState.selectedStageId) || ROADMAP_DATA[0];
+      document.getElementById("insp-badge").textContent = stage.code;
+      document.getElementById("insp-complexity").textContent = stage.complexity;
+      document.getElementById("insp-title").textContent = stage.title;
+      document.getElementById("insp-desc").textContent = stage.desc;
+      document.getElementById("tab-prob-count").textContent = stage.problems.length;
+
+      // Problems list
+      const probContainer = document.getElementById("insp-tab-problems");
+      probContainer.innerHTML = stage.problems.map(p => {
+        const isSolved = !!appState.solved[p.id];
+        const isReview = !!appState.review[p.id];
+        return `
+          <div class="p-3 rounded-xl border ${isSolved ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200 bg-slate-50/60 hover:bg-slate-50'} transition">
+            <div class="flex items-start justify-between gap-2">
+              <label class="flex items-start gap-2.5 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${isSolved ? 'checked' : ''} onchange="toggleProblemSolved('${p.id}')"
+                       class="mt-1 w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-0 cursor-pointer" />
+                <div>
+                  <a href="${p.url}" target="_blank" rel="noopener"
+                     class="text-xs font-bold ${isSolved ? 'line-through text-slate-400' : 'text-slate-900 hover:text-sky-600'} transition">
+                    ${p.name} ↗
+                  </a>
+                  <p class="text-[11px] text-slate-600 mt-0.5">${p.hint}</p>
+                </div>
+              </label>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded border ${diffBadgeClass(p.diff)}">${p.diff}</span>
+                <button onclick="toggleProblemReview('${p.id}')" title="Đánh dấu cần ôn lại (Spaced Repetition)"
+                        class="text-xs px-2 py-0.5 rounded border transition ${isReview ? 'bg-purple-100 text-purple-700 border-purple-300 font-bold' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}">
+                  ★
+                </button>
+              </div>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 pl-6">
+              <span class="mono font-medium text-sky-700">Pattern: ${p.pattern}</span>
+              ${isReview ? '<span class="text-purple-700 font-semibold">Đã thêm vào Hộp Ôn tập</span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Signals & Pitfalls
+      document.getElementById("insp-signals-list").innerHTML = stage.signals.map(s => `<li>${s}</li>`).join("");
+      document.getElementById("insp-pitfalls-list").innerHTML = stage.pitfalls.map(s => `<li>${s}</li>`).join("");
+      document.getElementById("stage-note-input").value = appState.stageNotes[stage.id] || "";
+
+      // Code template
+      document.getElementById("template-title").textContent = stage.templateTitle;
+      document.getElementById("insp-code-block").textContent = stage.templateCode;
+    }
+
+    // RENDER TOP STATS
+    function renderStats() {
+      let total = 0, solvedCount = 0, easy = 0, med = 0, hard = 0, reviewCount = 0;
+      ROADMAP_DATA.forEach(s => {
+        s.problems.forEach(p => {
+          total++;
+          if (appState.solved[p.id]) {
+            solvedCount++;
+            if (p.diff === "Easy") easy++;
+            else if (p.diff === "Medium") med++;
+            else if (p.diff === "Hard") hard++;
+          }
+          if (appState.review[p.id]) reviewCount++;
+        });
+      });
+      const pct = total ? Math.round((solvedCount / total) * 100) : 0;
+      document.getElementById("overall-count").textContent = `${solvedCount} / ${total} bài (${pct}%)`;
+      document.getElementById("overall-bar").style.width = `${pct}%`;
+      document.getElementById("easy-stat").textContent = easy;
+      document.getElementById("med-stat").textContent = med;
+      document.getElementById("hard-stat").textContent = hard;
+      document.getElementById("review-stat").textContent = reviewCount;
+    }
+
+    // RENDER FULL TABLE VIEW
+    function renderAllProblemsTable() {
+      const q = (document.getElementById("search-input")?.value || "").toLowerCase();
+      const diffFilter = document.getElementById("filter-diff")?.value || "ALL";
+      const tbody = document.getElementById("all-problems-tbody");
+      if (!tbody) return;
+
+      let rows = [];
+      ROADMAP_DATA.forEach(stage => {
+        stage.problems.forEach(p => {
+          if (diffFilter !== "ALL" && p.diff !== diffFilter) return;
+          if (q && !p.name.toLowerCase().includes(q) && !p.pattern.toLowerCase().includes(q)) return;
+          const isSolved = !!appState.solved[p.id];
+          const isReview = !!appState.review[p.id];
+          rows.push(`
+            <tr class="hover:bg-slate-50 transition">
+              <td class="py-2.5 px-2">
+                <input type="checkbox" ${isSolved ? 'checked' : ''} onchange="toggleProblemSolved('${p.id}')" class="w-4 h-4 rounded cursor-pointer" />
+              </td>
+              <td class="py-2.5 px-2">
+                <button onclick="toggleProblemReview('${p.id}')" class="px-2 py-0.5 rounded border ${isReview ? 'bg-purple-100 text-purple-700 border-purple-300 font-bold' : 'text-slate-400 border-slate-200 bg-white'}">★</button>
+              </td>
+              <td class="py-2.5 px-2 font-semibold">
+                <a href="${p.url}" target="_blank" class="${isSolved ? 'line-through text-slate-400' : 'text-slate-900 hover:text-sky-600'}">${p.name} ↗</a>
+              </td>
+              <td class="py-2.5 px-2 text-slate-500 font-medium">Nút ${stage.id}</td>
+              <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded border text-[10px] font-semibold ${diffBadgeClass(p.diff)}">${p.diff}</span></td>
+              <td class="py-2.5 px-2 mono font-medium text-sky-700">${p.pattern}</td>
+            </tr>
+          `);
+        });
+      });
+      tbody.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="6" class="py-6 text-center text-slate-500">Không tìm thấy bài tập phù hợp.</td></tr>`;
+    }
+
+    // RENDER SPACED REPETITION QUEUE
+    function renderReviewQueue() {
+      const container = document.getElementById("review-list-container");
+      if (!container) return;
+      let items = [];
+      ROADMAP_DATA.forEach(stage => {
+        stage.problems.forEach(p => {
+          if (appState.review[p.id]) {
+            items.push({ stage, p });
+          }
+        });
+      });
+
+      if (!items.length) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
+            Chưa có bài tập nào trong Hộp Ôn Tập. Hãy bấm vào biểu tượng ngôi sao (★) cạnh bài tập bất kỳ để đưa vào danh sách ôn tập ngắt quãng!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(({ stage, p }) => `
+        <div class="p-3.5 rounded-xl bg-purple-50/40 border border-purple-200 flex items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <a href="${p.url}" target="_blank" class="text-xs font-bold text-slate-900 hover:text-sky-600">${p.name} ↗</a>
+              <span class="text-[10px] px-2 py-0.5 rounded border ${diffBadgeClass(p.diff)}">${p.diff}</span>
+              <span class="text-[10px] text-slate-500 font-medium">• Nút ${stage.id} (${p.pattern})</span>
+            </div>
+            <p class="text-[11px] text-slate-600 mt-1">Gợi ý: ${p.hint}</p>
+          </div>
+          <button onclick="toggleProblemReview('${p.id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300 shrink-0 transition">
+            Đã ôn xong ✓
+          </button>
+        </div>
+      `).join("");
+    }
+
+    // INTERACTION HANDLERS
+    function selectStage(stageId) {
+      appState.selectedStageId = stageId;
+      saveState();
+      renderTreeNodes();
+      renderInspector();
+    }
+
+    function toggleProblemSolved(probId) {
+      appState.solved[probId] = !appState.solved[probId];
+      if (!appState.solved[probId]) delete appState.solved[probId];
+      saveState();
+      refreshAll();
+    }
+
+    function toggleProblemReview(probId) {
+      appState.review[probId] = !appState.review[probId];
+      if (!appState.review[probId]) delete appState.review[probId];
+      saveState();
+      refreshAll();
+    }
+
+    function saveStageNote() {
+      const val = document.getElementById("stage-note-input").value;
+      appState.stageNotes[appState.selectedStageId] = val;
+      saveState();
+    }
+
+    function switchInspectorTab(tabName) {
+      appState.activeSubTab = tabName;
+      ["problems", "signals", "template"].forEach(t => {
+        document.getElementById(`insp-tab-${t}`).classList.toggle("hidden", t !== tabName);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabName) {
+          btn.className = "py-1.5 rounded-lg bg-white text-sky-700 shadow-sm transition";
+        } else {
+          btn.className = "py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+        }
+      });
+    }
+
+    function switchMainView(viewName) {
+      ["roadmap", "table", "review"].forEach(v => {
+        document.getElementById(`view-${v}`).classList.toggle("hidden", v !== viewName);
+        const btn = document.getElementById(`btn-view-${v}`);
+        if (v === viewName) {
+          btn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-sm transition";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+        }
+      });
+    }
+
+    function copyCodeTemplate() {
+      const code = document.getElementById("insp-code-block").textContent;
+      navigator.clipboard.writeText(code);
+      const btn = document.getElementById("copy-btn");
+      btn.textContent = "Đã Copy ✓";
+      setTimeout(() => { btn.textContent = "Copy Code"; }, 1500);
+    }
+
+    function exportProgress() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+      const dlAnchor = document.createElement("a");
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "dsa_roadmap_progress.json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    }
+
+    function resetProgress() {
+      if (confirm("Bạn có chắc muốn xóa toàn bộ tiến độ bài tập đã đánh dấu?")) {
+        appState.solved = {};
+        appState.review = {};
+        appState.stageNotes = {};
+        saveState();
+        refreshAll();
+      }
+    }
+
+    function refreshAll() {
+      renderStats();
+      renderTreeNodes();
+      renderInspector();
+      renderAllProblemsTable();
+      renderReviewQueue();
+    }
+
+    // INIT
+    loadState();
+    refreshAll();
+  </script>
+</body>
+</html>
